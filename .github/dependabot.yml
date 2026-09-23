@@ -4,12 +4,24 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
     groups:
       chat-sdk:
         patterns: ["chat", "@chat-adapter/*"]
       pi:
         patterns: ["@earendil-works/*"]
+      dev-tooling:
+        patterns: ["typescript", "vitest", "@types/node"]
+    ignore:
+      # @types/node major tracks the lowest Node major in engines (22). See CLAUDE.md.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
