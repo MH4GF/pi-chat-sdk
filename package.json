@@ -1,6 +1,6 @@
 {
   "name": "pi-chat-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Glue between pi (the minimal coding agent) sessions and Chat SDK threads",
   "license": "MIT",
   "repository": {
@@ -43,5 +43,20 @@
     "chat": "4.41.0",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
+  },
+  "keywords": [
+    "pi",
+    "pi-coding-agent",
+    "coding-agent",
+    "chat-sdk",
+    "slack",
+    "slack-bot",
+    "discord",
+    "telegram",
+    "ai-agent"
+  ],
+  "homepage": "https://github.com/MH4GF/pi-chat-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/MH4GF/pi-chat-sdk/issues"
   }
 }

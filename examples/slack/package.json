@@ -1,0 +1,21 @@
+{
+  "name": "pi-chat-sdk-example-slack",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "start": "node --env-file=.env index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chat-adapter/slack": "4.41.0",
+    "@chat-adapter/state-memory": "4.41.0",
+    "@earendil-works/pi-coding-agent": "0.87.1",
+    "chat": "4.41.0",
+    "pi-chat-sdk": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "typescript": "5.9.3"
+  }
+}

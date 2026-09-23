@@ -1,8 +1,22 @@
 # pi-chat-sdk
 
-Glue between [pi](https://pi.dev) (the minimal coding agent) and [Chat SDK](https://chat-sdk.dev). One Chat SDK thread becomes one persistent pi session; pi's streamed output becomes a streamed chat message. Slack, Teams, Discord, Google Chat and the other Chat SDK adapters all work the same way.
+[![npm](https://img.shields.io/npm/v/pi-chat-sdk?style=flat-square)](https://www.npmjs.com/package/pi-chat-sdk)
+[![CI](https://img.shields.io/github/actions/workflow/status/MH4GF/pi-chat-sdk/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/MH4GF/pi-chat-sdk/actions/workflows/ci.yml)
+[![MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](./LICENSE)
 
-The package deliberately stops there. Persona, tool policy, MCP servers, sandboxing, models and deployment stay in your bot and your `~/.pi/agent` config, exactly as they would for the pi TUI.
+Run [pi](https://pi.dev), the minimal coding agent, as a Slack, Telegram or Discord bot. One chat thread is one persistent pi session, pi's output streams into the chat message, and `pi --resume` opens the same conversation in the TUI.
+
+<!-- TODO: docs/demo.gif — Slack thread: question, tool-call lines, streamed answer, then `pi --resume` in the TUI -->
+
+pi-chat-sdk is a thin layer between pi's SDK and [Chat SDK](https://chat-sdk.dev), Vercel's adapter layer for Slack, Teams, Discord, Telegram, Google Chat and more. It deliberately stops there. Persona, tools, MCP servers, sandboxing, models and deployment stay in your bot and your `~/.pi/agent` config, exactly as they do for the pi TUI.
+
+## Why
+
+- **A plain daemon.** It uses pi's `createAgentSession`, not a pi extension living inside a TUI process. No tmux, no stdin tricks. Run it under launchd, systemd or Docker.
+- **Thread = session.** Session files go in pi's own per-cwd directory, so a chat conversation is a normal pi session: resumable in the TUI, forkable, compacted by pi. Want a fresh session? Start a new thread. No `/new` command needed.
+- **Your pi config, unchanged.** `AGENTS.md`, skills, extensions, MCP servers, `models.json` and the default model all apply. A local model through llama.cpp or Ollama works the same as a hosted one.
+- **Any Chat SDK adapter.** Slack's Agent experience (native streaming, stop button, session titles) is a flag on the adapter. Telegram needs only a bot token.
+- **Testable.** Swap pi for a fake with `createSession` and drive the bot with Chat SDK's mock adapter and matchers.
 
 ## Install
 
@@ -44,11 +58,22 @@ await bot.initialize();
 
 `attachPi` registers `onDirectMessage` and `onNewMention` handlers. Each message runs one pi turn in the session that belongs to the thread and streams the reply back with `thread.post(AsyncIterable)`.
 
+Complete, runnable bots with `.env.example` files are in [`examples/`](./examples):
+
+| Example | Transport | Status |
+| --- | --- | --- |
+| [Slack](./examples/slack) | Socket Mode. Ships app manifests for the Agent experience and for a plain bot | Runs in production |
+| [Telegram](./examples/telegram) | Long polling. A bot token is all you need | Untested |
+| [Discord](./examples/discord) | Gateway WebSocket | Untested |
+
+Other Chat SDK adapters (Teams, Google Chat, ...) get post-and-edit streaming from Chat SDK and should work the same way, but have not been run by the author. Reports welcome.
+
 ## What it does
 
 - **Thread = session.** Session files live in pi's own per-cwd directory (`~/.pi/agent/sessions/--<cwd>--/chat-<thread id>.jsonl`), so `pi --resume` in that cwd can open a chat conversation in the TUI.
 - **Streaming.** Text deltas are pushed as they arrive. Adapters with native streaming use it; others get post-and-edit from Chat SDK.
 - **Tool calls.** Hidden by default. `showToolCalls: true` renders a one-line summary per call as its own paragraph; pass a function for custom formatting or to skip some tools.
+- **Cancellation.** `thread.signal` is passed to every pi turn, so whatever fires it aborts the turn. Chat SDK fires it from Slack's stop button under the Agent experience.
 - **Authorization.** `authorize(message, thread)` returns `true`, `false` (ignore silently) or a string (reply with it instead of running pi).
 - **Serialization.** Turns within one thread never overlap, whatever `concurrency` strategy the bot uses. `maxConcurrentTurns` caps turns across threads.
 - **Lifecycle.** Sessions are disposed after `idleTimeoutMs` (30 minutes by default) and recreated from the session file on the next message. `attachment.dispose()` tears everything down.
@@ -74,13 +99,29 @@ await bot.initialize();
 
 `createDefaultSessionFactory({ sessionOptions })` forwards `model`, `thinkingLevel`, `tools`, `customTools` and friends to pi's `createAgentSession`.
 
+## Alternatives
+
+Other ways to talk to pi from a chat app, as of September 2026. Corrections welcome.
+
+| Project | Runs as | One session per | Platforms |
+| --- | --- | --- | --- |
+| **pi-chat-sdk** | standalone process on pi's SDK | thread | anything Chat SDK supports |
+| [earendil-works/pi-chat](https://github.com/earendil-works/pi-chat) | pi extension + tmux workers, each channel in a Gondolin micro-VM | channel | Discord, Telegram |
+| [tintinweb/pi-messenger-bridge](https://github.com/tintinweb/pi-messenger-bridge) | pi extension inside the TUI process | the TUI's own session (shared) | Telegram, WhatsApp, Slack, Discord |
+| [comsysto/pi-slack-bridge](https://github.com/comsysto/pi-slack-bridge) | pi extension + tmux | DM thread | Slack |
+| [samfoy/pi-slack-bot](https://github.com/samfoy/pi-slack-bot) | standalone process on pi's SDK | thread (DMs only) | Slack |
+| [Crokily/pi-tag](https://github.com/Crokily/pi-tag) | standalone, `pi -p` per message | channel or DM | Slack |
+| [geminixiang/mikan](https://github.com/geminixiang/mikan) | its own harness on `pi-agent-core` | thread, with a sandboxed workspace per channel | Slack |
+
+Pick pi-chat, or an extension, if you want the bot to be the TUI session you are already sitting in, or if you want the per-channel VM sandbox pi-chat ships. Pick pi-chat-sdk if you want a resident bot that behaves like `pi` in a directory, with the chat platform swapped in for the terminal.
+
 ## Things that bit us
 
-- **Call `bot.initialize()` yourself** when running as a socket-mode daemon. Chat SDK only auto-initializes on the first webhook.
+- **Call `bot.initialize()` yourself** when running as a socket-mode or polling daemon. Chat SDK only auto-initializes on the first webhook.
 - **`concurrency` defaults to `"drop"`.** A second message during a turn is discarded. `"queue"` keeps it, but queued entries expire after `queueEntryTtlMs` (90 s by default), which a slow model overruns easily. Prefer `"concurrent"`: `attachPi` already runs one turn per thread at a time and `maxConcurrentTurns` caps the total, with no expiry.
 - **Slack edits are rate limited.** Fallback streaming edits the message every `streamingUpdateIntervalMs` (500 ms by default). Raise it to around 1500 ms for Slack, or enable `nativeStreaming` on the adapter (needs the `assistant:write` scope).
 - **Memory state loses subscriptions on restart.** Fine for DMs and mentions, which do not need subscriptions. Use a persistent state adapter if you rely on `onSubscribedMessage`.
-- **Slack DMs are one long thread.** Chat SDK maps every top-level DM message to the same thread id, so a DM channel is one pi session. Replies inside a Slack thread get their own session.
+- **Slack DMs are one long thread.** Chat SDK maps every top-level DM message to the same thread id, so a DM channel is one pi session. Replies inside a Slack thread get their own session. With the Agent experience (`agentView: true`) every Slack session is its own thread instead.
 - **Extensions need `bindExtensions`.** pi's `createAgentSession` does not bind extensions on its own. The default factory does it with no UI, so extension calls to `ctx.ui.confirm()` resolve `false` and `select`/`input` resolve `undefined`. Configure extensions that prompt for approval (for example `approveTools: false` in pi-mcp-adapter) accordingly.
 - **Context files depend on `cwd`.** pi reads `AGENTS.md` (or `CLAUDE.md`) from `cwd` and its parents in addition to `~/.pi/agent/AGENTS.md`. Choose `cwd` deliberately.
 
@@ -114,7 +155,7 @@ npm run typecheck
 
 ### Releasing
 
-Releases use npm [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (GitHub Actions OIDC, no token secret) with [staged publishing](https://docs.npmjs.com/staged-publishing/): CI can only stage, a maintainer approves with 2FA. Bump `version` in `package.json`, commit, then push a matching tag:
+Releases use npm [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (GitHub Actions OIDC, no token secret) with [staged publishing](https://docs.npmjs.com/staged-publishing/): CI can only stage, a maintainer approves with 2FA. Add an entry to `CHANGELOG.md`, bump `version` in `package.json`, commit, then push a matching tag:
 
 ```bash
 git tag v0.1.1 && git push origin v0.1.1
@@ -127,6 +168,8 @@ npm stage list pi-chat-sdk
 npm stage view <stage-id>
 npm stage approve <stage-id>   # asks for a 2FA code
 ```
+
+Finally publish a GitHub Release for the tag with the changelog entry as its notes.
 
 ## License
 
