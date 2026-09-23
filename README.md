@@ -6,7 +6,9 @@
 
 Run [pi](https://pi.dev), the minimal coding agent, as a Slack, Telegram or Discord bot. One chat thread is one persistent pi session, pi's output streams into the chat message, and `pi --resume` opens the same conversation in the TUI.
 
-<!-- TODO: docs/demo.gif — Slack thread: question, tool-call lines, streamed answer, then `pi --resume` in the TUI -->
+https://github.com/user-attachments/assets/9938fb84-5334-4e70-a288-d949e1655a06
+
+*pi answering in Slack, then the same conversation opened with `pi --resume` in the TUI.*
 
 pi-chat-sdk is a thin layer between pi's SDK and [Chat SDK](https://chat-sdk.dev), Vercel's adapter layer for Slack, Teams, Discord, Telegram, Google Chat and more. It deliberately stops there. Persona, tools, MCP servers, sandboxing, models and deployment stay in your bot and your `~/.pi/agent` config, exactly as they do for the pi TUI.
 
