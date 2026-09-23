@@ -114,13 +114,19 @@ npm run typecheck
 
 ### Releasing
 
-Releases go to npm through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (GitHub Actions OIDC, no token secret). Bump `version` in `package.json`, commit, then push a matching tag:
+Releases use npm [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (GitHub Actions OIDC, no token secret) with [staged publishing](https://docs.npmjs.com/staged-publishing/): CI can only stage, a maintainer approves with 2FA. Bump `version` in `package.json`, commit, then push a matching tag:
 
 ```bash
-git tag v0.1.0 && git push origin v0.1.0
+git tag v0.1.1 && git push origin v0.1.1
 ```
 
-`release.yml` checks that the tag matches `package.json`, runs `prepublishOnly` (typecheck, tests, build) and publishes with provenance.
+`release.yml` checks that the tag matches `package.json`, runs typecheck, tests and build, and runs `npm stage publish`. Then review and approve on a machine logged in to npm:
+
+```bash
+npm stage list pi-chat-sdk
+npm stage view <stage-id>
+npm stage approve <stage-id>   # asks for a 2FA code
+```
 
 ## License
 

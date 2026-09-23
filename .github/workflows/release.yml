@@ -1,8 +1,9 @@
 name: Release
 
-# Publishes to npm with trusted publishing (OIDC). No NPM_TOKEN secret.
-# Configure once on npmjs.com: package settings > Trusted Publisher > GitHub Actions,
-# organization "MH4GF", repository "pi-chat-sdk", workflow filename "release.yml".
+# Stages a release on npm with trusted publishing (OIDC). No NPM_TOKEN secret.
+# The trusted publisher on npmjs.com allows only `npm stage publish`, so nothing goes
+# live from CI: a maintainer reviews the staged package and approves it with 2FA
+# (`npm stage approve <stage-id>` or the npmjs.com UI).
 # Trigger: push a tag `vX.Y.Z` whose version matches package.json.
 
 on:
@@ -24,7 +25,7 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
           cache: npm
-      # Trusted publishing needs npm >= 11.5.1; Node 22 bundles npm 10.
+      # Trusted publishing needs npm >= 11.5.1 and staged publishing >= 11.15.0; Node 22 bundles npm 10.
       - run: npm install -g npm@latest && npm --version
       - run: npm ci
       - name: Check tag matches package.json version
@@ -35,5 +36,6 @@ jobs:
             echo "tag v$tag does not match package.json version $version" >&2
             exit 1
           fi
-      # prepublishOnly runs typecheck, tests and build.
-      - run: npm publish --access public
+      # Typecheck, tests and build (the same steps prepublishOnly runs), then stage.
+      - run: npm run prepublishOnly
+      - run: npm stage publish --access public
