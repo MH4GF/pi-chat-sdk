@@ -112,6 +112,16 @@ npm run typecheck
 
 `.npmrc` sets `legacy-peer-deps=true`; npm's resolver trips over Chat SDK's vitest peer range otherwise.
 
+### Releasing
+
+Releases go to npm through [trusted publishing](https://docs.npmjs.com/trusted-publishers/) (GitHub Actions OIDC, no token secret). Bump `version` in `package.json`, commit, then push a matching tag:
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+`release.yml` checks that the tag matches `package.json`, runs `prepublishOnly` (typecheck, tests, build) and publishes with provenance.
+
 ## License
 
 MIT
