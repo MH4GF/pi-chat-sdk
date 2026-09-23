@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      chat-sdk:
+        patterns: ["chat", "@chat-adapter/*"]
+      pi:
+        patterns: ["@earendil-works/*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

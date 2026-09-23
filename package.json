@@ -1,0 +1,46 @@
+{
+  "name": "pi-chat-sdk",
+  "version": "0.1.0",
+  "description": "Glue between pi (the minimal coding agent) sessions and Chat SDK threads",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MH4GF/pi-chat-sdk.git"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.87.0 <1",
+    "chat": ">=4.28.0 <5"
+  },
+  "devDependencies": {
+    "@chat-adapter/tests": "4.41.0",
+    "@earendil-works/pi-coding-agent": "0.87.1",
+    "@types/node": "22.20.4",
+    "chat": "4.41.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}
