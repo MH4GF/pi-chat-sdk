@@ -28,7 +28,8 @@ for dir in examples/*/; do (cd "$dir" && npm pkg set dependencies.pi-chat-sdk=fi
 
 Dependencies are updated by Dependabot PRs plus a weekly issue that asks a Symphony session to consolidate them (`.github/workflows/recurring-dependency-maintenance.yml`). Rules:
 
-- **GitHub Actions bumps**: accept when CI is green.
+- **Cooldown**: `dependabot.yml` waits 7 days after a release (14 for majors) before proposing it, and `.npmrc` sets `min-release-age=7` for manual installs. Never bypass either (`--min-release-age 0`) to get a newer version. If a bump is urgent because of a vulnerability, Dependabot's security updates already skip the cooldown.
+- **GitHub Actions bumps**: accept when CI is green. Actions are pinned to commit SHAs with a version comment; keep the comment in sync with the SHA.
 - **`@types/node`**: its major tracks the lowest Node major in `engines` (22 today). Never bump it past that; it is in `dependabot.yml` `ignore`.
 - **Dev tooling (typescript, vitest)**: accept when typecheck, tests and build pass and `dist/*.d.ts` are unchanged apart from formatting. vitest is constrained by `@chat-adapter/tests`' peer range; if a bump breaks that, leave it until the Chat SDK group moves and add an `ignore` entry with the reason.
 - **`chat` / `@chat-adapter/*`** (the `chat-sdk` group): bump devDependencies, run everything, and check `peerDependencies.chat` still covers the new version. Also update the versions written in `README.md` and `examples/*/package.json`.

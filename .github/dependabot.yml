@@ -7,6 +7,12 @@ updates:
       day: monday
       time: "09:00"
       timezone: Asia/Tokyo
+    # Supply-chain cooldown: do not propose a version until it has been public for 7 days
+    # (14 for majors). Malicious releases are usually pulled within hours. Security updates
+    # bypass the cooldown by design.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
     groups:
       chat-sdk:
         patterns: ["chat", "@chat-adapter/*"]
@@ -25,3 +31,6 @@ updates:
       day: monday
       time: "09:00"
       timezone: Asia/Tokyo
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
