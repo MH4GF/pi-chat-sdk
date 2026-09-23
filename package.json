@@ -41,7 +41,7 @@
     "@earendil-works/pi-coding-agent": "0.87.1",
     "@types/node": "22.20.4",
     "chat": "4.41.0",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "vitest": "4.1.11"
   },
   "keywords": [
