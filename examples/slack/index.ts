@@ -38,8 +38,8 @@ const bot = new Chat({
       mode: "socket",
       appToken: required("SLACK_APP_TOKEN"),
       botToken: required("SLACK_BOT_TOKEN"),
-      // With manifest-agent-view.yaml: Slack's Agent experience. Each Slack session is a thread,
-      // the stop button aborts the pi turn through thread.signal, and the session gets a title.
+      // With manifest-agent-view.yaml: Slack's Agent experience. Each Slack session is a thread
+      // with a title, and Chat SDK fires thread.signal (which aborts the pi turn) from the stop button.
       agentView,
       ...(agentView ? { sessionTitle: ({ text }: { text: string }) => sessionTitleFrom(text) } : {}),
       logger,

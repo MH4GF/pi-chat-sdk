@@ -12,7 +12,7 @@
     "@chat-adapter/state-memory": "4.41.0",
     "@earendil-works/pi-coding-agent": "0.87.1",
     "chat": "4.41.0",
-    "pi-chat-sdk": "^0.1.1"
+    "pi-chat-sdk": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "22.20.4",

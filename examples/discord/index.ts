@@ -49,6 +49,20 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 logger.info("pi is listening on Discord");
 while (!controller.signal.aborted) {
   let listener: Promise<unknown> = Promise.resolve();
-  await discord.startGatewayListener({ waitUntil: (task) => { listener = task; } }, SESSION_MS, controller.signal);
-  await listener;
+  const response = await discord.startGatewayListener(
+    { waitUntil: (task) => { listener = task; } },
+    SESSION_MS,
+    controller.signal,
+  );
+  if (!response.ok) {
+    // Not initialized or misconfigured; the adapter never called waitUntil. Do not spin.
+    logger.error("gateway listener refused", { status: response.status, body: await response.text() });
+    break;
+  }
+  try {
+    await listener;
+  } catch (error) {
+    logger.warn("gateway listener failed, reconnecting", { error });
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
 }

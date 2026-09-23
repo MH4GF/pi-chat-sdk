@@ -73,7 +73,7 @@ Other Chat SDK adapters (Teams, Google Chat, ...) get post-and-edit streaming fr
 - **Thread = session.** Session files live in pi's own per-cwd directory (`~/.pi/agent/sessions/--<cwd>--/chat-<thread id>.jsonl`), so `pi --resume` in that cwd can open a chat conversation in the TUI.
 - **Streaming.** Text deltas are pushed as they arrive. Adapters with native streaming use it; others get post-and-edit from Chat SDK.
 - **Tool calls.** Hidden by default. `showToolCalls: true` renders a one-line summary per call as its own paragraph; pass a function for custom formatting or to skip some tools.
-- **Cancellation.** The thread's abort signal (Slack's stop button under the Agent experience) aborts the running pi turn.
+- **Cancellation.** `thread.signal` is passed to every pi turn, so whatever fires it aborts the turn. Chat SDK fires it from Slack's stop button under the Agent experience.
 - **Authorization.** `authorize(message, thread)` returns `true`, `false` (ignore silently) or a string (reply with it instead of running pi).
 - **Serialization.** Turns within one thread never overlap, whatever `concurrency` strategy the bot uses. `maxConcurrentTurns` caps turns across threads.
 - **Lifecycle.** Sessions are disposed after `idleTimeoutMs` (30 minutes by default) and recreated from the session file on the next message. `attachment.dispose()` tears everything down.
@@ -107,7 +107,7 @@ Other ways to talk to pi from a chat app, as of September 2026. Corrections welc
 | --- | --- | --- | --- |
 | **pi-chat-sdk** | standalone process on pi's SDK | thread | anything Chat SDK supports |
 | [earendil-works/pi-chat](https://github.com/earendil-works/pi-chat) | pi extension + tmux workers, each channel in a Gondolin micro-VM | channel | Discord, Telegram |
-| [tintinweb/pi-messenger-bridge](https://github.com/tintinweb/pi-messenger-bridge) | pi extension inside the TUI process | TUI session | Telegram, WhatsApp, Slack, Discord |
+| [tintinweb/pi-messenger-bridge](https://github.com/tintinweb/pi-messenger-bridge) | pi extension inside the TUI process | the TUI's own session (shared) | Telegram, WhatsApp, Slack, Discord |
 | [comsysto/pi-slack-bridge](https://github.com/comsysto/pi-slack-bridge) | pi extension + tmux | DM thread | Slack |
 | [samfoy/pi-slack-bot](https://github.com/samfoy/pi-slack-bot) | standalone process on pi's SDK | thread (DMs only) | Slack |
 | [Crokily/pi-tag](https://github.com/Crokily/pi-tag) | standalone, `pi -p` per message | channel or DM | Slack |
