@@ -73,6 +73,21 @@ describe("attachPi", () => {
     expect(text.endsWith("Done.")).toBe(true);
   });
 
+  it("appends the error after partial output when prompt() fails mid-stream", async () => {
+    const { bot, adapter } = createBot();
+    attachPi(bot, {
+      cwd: "/tmp",
+      formatError: (e) => `boom: ${e instanceof Error ? e.message : String(e)}`,
+      createSession: async () =>
+        fakeSession(async (emit) => {
+          emit(textDelta("partial"));
+          throw new Error("cut off");
+        }),
+    });
+    await bot.processMessage(adapter, THREAD_ID, dm("go"));
+    expect(lastPostedText(adapter)).toBe("partial\n\nboom: cut off");
+  });
+
   it("hides tool calls by default", async () => {
     const { bot, adapter } = createBot();
     attachPi(bot, {
@@ -87,11 +102,13 @@ describe("attachPi", () => {
     expect(lastPostedText(adapter)).toBe("ok");
   });
 
-  it("posts a fallback when pi produced no text", async () => {
+  it("edits the placeholder into the fallback text when pi produced no text", async () => {
     const { bot, adapter } = createBot();
     attachPi(bot, { cwd: "/tmp", createSession: async () => fakeSession(async () => {}) });
     await bot.processMessage(adapter, THREAD_ID, dm("go"));
-    expect(lastPostedText(adapter)).toBe("(no response)");
+    // One post (the "..." placeholder) edited in place; no dangling placeholder.
+    expect(adapter).toHaveEdited(THREAD_ID, "msg-1", "(no response)");
+    expect(postedTexts(adapter)).toEqual(["...", "(no response)"]);
   });
 
   it("posts the error when prompt() rejects and keeps serving the thread", async () => {
@@ -108,7 +125,8 @@ describe("attachPi", () => {
     });
 
     await bot.processMessage(adapter, THREAD_ID, dm("first"));
-    expect(lastPostedText(adapter)).toBe("Error: model exploded");
+    expect(adapter).toHaveEdited(THREAD_ID, "msg-1", "Error: model exploded");
+    expect(postedTexts(adapter)).toEqual(["...", "Error: model exploded"]);
 
     await bot.processMessage(adapter, THREAD_ID, dm("second"));
     expect(lastPostedText(adapter)).toBe("fine now");
@@ -126,7 +144,8 @@ describe("attachPi", () => {
       },
     });
     await bot.processMessage(adapter, THREAD_ID, dm("a"));
-    expect(lastPostedText(adapter)).toBe("Error: no model");
+    // The session never existed, so no stream started: the error is a plain post, not a placeholder edit.
+    expect(postedTexts(adapter)).toEqual(["Error: no model"]);
     await bot.processMessage(adapter, THREAD_ID, dm("b"));
     expect(lastPostedText(adapter)).toBe("ok");
     expect(attempts).toBe(2);

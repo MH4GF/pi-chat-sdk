@@ -56,6 +56,7 @@ export function attachPi(bot: PiBot, options: AttachPiOptions): PiAttachment {
     if (entry.idleTimer) clearTimeout(entry.idleTimer);
     const events: AgentSessionEvent[] = [];
     let error: unknown;
+    const formatError = options.formatError ?? ((err: unknown) => `Error: ${errorMessage(err)}`);
     try {
       if (!slots.available && options.busyMessage) await thread.post(options.busyMessage);
       const release = await slots.acquire();
@@ -68,24 +69,32 @@ export function attachPi(bot: PiBot, options: AttachPiOptions): PiAttachment {
           onEvent: (e) => { events.push(e); },
           signal: thread.signal,
         });
-        let produced = false;
-        const spy: AsyncIterable<string> = {
+        // Chat SDK posts a placeholder as soon as it starts draining the stream. The stream must
+        // therefore never throw and never end empty, or the placeholder is left dangling.
+        const safe: AsyncIterable<string> = {
           async *[Symbol.asyncIterator]() {
-            for await (const chunk of turn.text) { produced = true; yield chunk; }
+            let produced = false;
+            try {
+              for await (const chunk of turn.text) { produced = true; yield chunk; }
+            } catch (err) {
+              error = err;
+              yield (produced ? "\n\n" : "") + formatError(err);
+              return;
+            }
+            if (!produced) yield options.emptyResponseMessage ?? "(no response)";
           },
         };
-        await thread.post(spy);
-        await turn.done;
-        if (!produced) await thread.post(options.emptyResponseMessage ?? "(no response)");
+        await thread.post(safe);
+        await turn.done.catch(() => {});
       } finally {
         release();
       }
     } catch (err) {
+      // Failure outside the stream (session creation, typing, posting). Report it as a plain message.
       error = err;
-      logger?.error?.("pi-chat-sdk: turn failed", { threadId: thread.id, error: err });
-      const message = options.formatError ? options.formatError(err) : `Error: ${errorMessage(err)}`;
-      await thread.post(message).catch(() => {});
+      await thread.post(formatError(err)).catch(() => {});
     } finally {
+      if (error !== undefined) logger?.error?.("pi-chat-sdk: turn failed", { threadId: thread.id, error });
       touch(thread.id, entry);
       options.onTurnEnd?.(error === undefined ? { threadId: thread.id, events } : { threadId: thread.id, events, error });
     }

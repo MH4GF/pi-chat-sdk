@@ -26,8 +26,11 @@ const bot = new Chat({
     slack: createSlackAdapter({ mode: "socket", appToken: process.env.SLACK_APP_TOKEN!, botToken: process.env.SLACK_BOT_TOKEN! }),
   },
   state: createMemoryState(),
-  // Chat SDK drops messages that arrive mid-turn by default. Queue them instead.
-  concurrency: { strategy: "queue" },
+  // Chat SDK drops messages that arrive mid-turn by default. attachPi serializes turns per
+  // thread itself, so let Chat SDK run handlers concurrently (see "Things that bit us").
+  concurrency: { strategy: "concurrent" },
+  // Post-and-edit streaming hits Slack's chat.update rate limit at the 500 ms default.
+  streamingUpdateIntervalMs: 1500,
 });
 
 attachPi(bot, {
@@ -49,7 +52,7 @@ await bot.initialize();
 - **Authorization.** `authorize(message, thread)` returns `true`, `false` (ignore silently) or a string (reply with it instead of running pi).
 - **Serialization.** Turns within one thread never overlap, whatever `concurrency` strategy the bot uses. `maxConcurrentTurns` caps turns across threads.
 - **Lifecycle.** Sessions are disposed after `idleTimeoutMs` (30 minutes by default) and recreated from the session file on the next message. `attachment.dispose()` tears everything down.
-- **Failures.** A rejected turn posts `Error: <message>` (customize with `formatError`) and the thread keeps working. A model that produced no text posts `emptyResponseMessage`.
+- **Failures.** A rejected turn ends the streamed message with `Error: <message>` (customize with `formatError`) and the thread keeps working. A model that produced no text gets `emptyResponseMessage` instead. Either way the streaming placeholder Chat SDK posted is edited, never left dangling.
 
 ## Options
 
@@ -74,7 +77,8 @@ await bot.initialize();
 ## Things that bit us
 
 - **Call `bot.initialize()` yourself** when running as a socket-mode daemon. Chat SDK only auto-initializes on the first webhook.
-- **`concurrency` defaults to `"drop"`.** A second message during a turn is discarded unless you choose `"queue"` (or another strategy).
+- **`concurrency` defaults to `"drop"`.** A second message during a turn is discarded. `"queue"` keeps it, but queued entries expire after `queueEntryTtlMs` (90 s by default), which a slow model overruns easily. Prefer `"concurrent"`: `attachPi` already runs one turn per thread at a time and `maxConcurrentTurns` caps the total, with no expiry.
+- **Slack edits are rate limited.** Fallback streaming edits the message every `streamingUpdateIntervalMs` (500 ms by default). Raise it to around 1500 ms for Slack, or enable `nativeStreaming` on the adapter (needs the `assistant:write` scope).
 - **Memory state loses subscriptions on restart.** Fine for DMs and mentions, which do not need subscriptions. Use a persistent state adapter if you rely on `onSubscribedMessage`.
 - **Slack DMs are one long thread.** Chat SDK maps every top-level DM message to the same thread id, so a DM channel is one pi session. Replies inside a Slack thread get their own session.
 - **Extensions need `bindExtensions`.** pi's `createAgentSession` does not bind extensions on its own. The default factory does it with no UI, so extension calls to `ctx.ui.confirm()` resolve `false` and `select`/`input` resolve `undefined`. Configure extensions that prompt for approval (for example `approveTools: false` in pi-mcp-adapter) accordingly.
