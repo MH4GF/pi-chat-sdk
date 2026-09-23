@@ -21,3 +21,23 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # Typecheck every example against the package in this checkout instead of the npm release.
+      - run: |
+          for dir in examples/*/; do
+            echo "== $dir"
+            (cd "$dir" \
+              && npm pkg set dependencies.pi-chat-sdk=file:../.. \
+              && npm install --no-package-lock --no-audit --no-fund \
+              && npx tsc --noEmit)
+          done

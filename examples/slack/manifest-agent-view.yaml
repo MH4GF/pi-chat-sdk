@@ -1,0 +1,48 @@
+# Slack app manifest with the Agent experience (features.agent_view): sessions in the agent
+# panel, native streaming (assistant:write), a stop button and session titles. Pair it with
+# SLACK_AGENT_VIEW=1. Switching an existing app from assistant_view to agent_view is irreversible.
+display_information:
+  name: pi
+  description: pi coding agent
+features:
+  app_home:
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
+  bot_user:
+    display_name: pi
+    always_online: true
+  agent_view:
+    agent_description: pi, the minimal coding agent. Message me directly or mention me in a thread.
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - assistant:write
+      - channels:history
+      - channels:read
+      - chat:write
+      - files:read
+      - files:write
+      - groups:history
+      - groups:read
+      - im:history
+      - im:read
+      - im:write
+      - reactions:read
+      - users:read
+settings:
+  event_subscriptions:
+    bot_events:
+      - agent_session_stopped
+      - agent_session_title_changed
+      - app_context_changed
+      - app_home_opened
+      - app_mention
+      - message.channels
+      - message.groups
+      - message.im
+  interactivity:
+    is_enabled: true
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false
