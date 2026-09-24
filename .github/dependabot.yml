@@ -4,12 +4,33 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    # Supply-chain cooldown: do not propose a version until it has been public for 7 days
+    # (14 for majors). Malicious releases are usually pulled within hours. Security updates
+    # bypass the cooldown by design.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
     groups:
       chat-sdk:
         patterns: ["chat", "@chat-adapter/*"]
       pi:
         patterns: ["@earendil-works/*"]
+      dev-tooling:
+        patterns: ["typescript", "vitest", "@types/node"]
+    ignore:
+      # @types/node major tracks the lowest Node major in engines (22). See CLAUDE.md.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    # github-actions accepts only default-days (the semver-* keys are rejected by the validator).
+    cooldown:
+      default-days: 7

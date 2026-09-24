@@ -1,0 +1,48 @@
+name: recurring dependency maintenance
+
+on:
+  schedule:
+    # Tuesday 00:00 UTC = Tuesday 09:00 JST, one day after Dependabot's Monday run (dependabot.yml).
+    - cron: "0 0 * * 2"
+  workflow_dispatch:
+
+# Files the weekly issue that a Symphony session picks up (status:todo) to consolidate open
+# Dependabot PRs into one PR. Policy lives in CLAUDE.md; this workflow only creates the trigger.
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Create the dependency maintenance issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TITLE: Dependency maintenance
+        run: |
+          set -euo pipefail
+
+          prs="$(gh pr list --repo "${REPO}" --author app/dependabot --state open \
+            --json number,title,url --jq '.[] | "- #\(.number) \(.title) \(.url)"')"
+          if [ -z "${prs}" ]; then
+            echo "skip: no open Dependabot PRs"
+            exit 0
+          fi
+
+          open_count="$(gh issue list --repo "${REPO}" --state open \
+            --search "\"${TITLE}\" in:title" --json title \
+            --jq "[.[] | select(.title == \"${TITLE}\")] | length")"
+          if [ "${open_count}" -gt 0 ]; then
+            echo "skip: ${open_count} open maintenance issue(s) already exist"
+            exit 0
+          fi
+
+          { cat .github/recurring/dependency-maintenance.md; echo; echo "${prs}"; } > body.md
+          gh issue create --repo "${REPO}" \
+            --title "${TITLE}" \
+            --body-file body.md \
+            --label "status:todo"
