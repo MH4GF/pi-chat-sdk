@@ -37,10 +37,10 @@
     "chat": ">=4.28.0 <5"
   },
   "devDependencies": {
-    "@chat-adapter/tests": "4.41.0",
+    "@chat-adapter/tests": "4.41.1",
     "@earendil-works/pi-coding-agent": "0.87.1",
     "@types/node": "22.20.4",
-    "chat": "4.41.0",
+    "chat": "4.41.1",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   },
